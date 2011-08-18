@@ -7,7 +7,10 @@ require_once 'lib/builder/ElasticSearchDSLBuilder.php';
 require_once 'lib/transport/ElasticSearchTransport.php';
 require_once 'lib/transport/ElasticSearchTransportHTTP.php';
 require_once 'lib/transport/ElasticSearchTransportMemcached.php';
-require_once 'lib/transport/ElasticSearchTransportThrift.php';
+
+if (isset($GLOBALS['THRIFT_ROOT'])) {
+	require_once 'lib/transport/ElasticSearchTransportThrift.php';
+}
 
 class ElasticSearchClient {
 
