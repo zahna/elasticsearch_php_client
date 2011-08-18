@@ -34,7 +34,7 @@ class ElasticSearchTransportHTTP extends ElasticSearchTransport {
     /**
      * How long before timing out CURL call
      */
-    const TIMEOUT = 5;
+    protected $timeout = 5;
 
     /**
      * What host to connect to for server
@@ -55,9 +55,10 @@ class ElasticSearchTransportHTTP extends ElasticSearchTransport {
     protected $ch;
 	
 	
-    public function __construct($host, $port) {
+    public function __construct($host, $port, $timeout = 5) {
         $this->host = $host;
         $this->port = $port;
+		$this->timeout = $timeout;
         $this->ch = curl_init();
     }
     
@@ -203,7 +204,7 @@ class ElasticSearchTransportHTTP extends ElasticSearchTransport {
         $protocol = "http";
         $requestURL = $protocol . "://" . $this->host . $url;
         curl_setopt($conn, CURLOPT_URL, $requestURL);
-        curl_setopt($conn, CURLOPT_TIMEOUT, self::TIMEOUT);
+        curl_setopt($conn, CURLOPT_TIMEOUT, $this->timeout);
         curl_setopt($conn, CURLOPT_PORT, $this->port);
         curl_setopt($conn, CURLOPT_RETURNTRANSFER, 1) ;
         curl_setopt($conn, CURLOPT_CUSTOMREQUEST, strtoupper($method));
