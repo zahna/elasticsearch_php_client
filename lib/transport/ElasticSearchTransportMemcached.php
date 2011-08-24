@@ -8,7 +8,7 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
         $this->conn = new Memcache;
         $this->conn->connect($host, $port);
     }
-    
+
     /**
      * Index a new document or update it if existing
      *
@@ -16,49 +16,48 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
      * @param array $document
      * @param mixed $id Optional
      */
-    public function index($document, $id=false, array $options = array()) {
+    public function index($document, $id=false, array $params = array()) {
         if ($id === false)
             throw new Exception("Memcached transport requires id when indexing");
 
         $document = json_encode($document);
-        $url = $this->buildUrl(array($this->type, $id));
+        $url = $this->buildUrl(array($this->type, $id), $params);
         $response = $this->conn->set($url, $document);
         return array(
             'ok' => $response
         );
     }
-    
+
     /**
      * Search
      *
      * @return array
      * @param mixed $id Optional
      */
-    public function search($query) {
+    public function search($query, array $params = array()) {
         if (is_array($query)) {
             if (array_key_exists("query", $query)) {
                 $dsl = new ElasticSearchDSLStringify($query);
                 $q = (string) $dsl;
                 $url = $this->buildUrl(array(
                     $this->type, "_search?q=" . $q
-                ));
+                ), $params);
                 $result = json_decode($this->conn->get($url), true);
                 return $result;
             }
             throw new Exception("Memcached protocol doesnt support the full DSL, only query");
-        }
-        elseif (is_string($query)) {
+        } else if (is_string($query)) {
             /**
              * String based search means http query string search
-             */
+	     */
             $url = $this->buildUrl(array(
-                $this->type, "_search?q=" . $query
-            ));
+                $this->type, "_search?q=".$query
+            ), $params);
             $result = json_decode($this->conn->get($url), true);
             return $result;
         }
     }
-    
+
     /**
      * Search
      *
@@ -66,7 +65,7 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
      * @param mixed $query String or array to use as criteria for delete
      * @param array $options Parameters to pass to delete action
      */
-    public function deleteByQuery($query, array $options = array()) {
+    public function deleteByQuery($query, array $params = array()) {
         if (is_array($query)) {
             /**
              * Array implies using the JSON query DSL
@@ -74,30 +73,33 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
             return;
             $url = $this->buildUrl(array(
                 $this->type, "_query"
-            ), $options);
+            ), $params);
             $result = $this->call($url, "DELETE", $query);
-        }
-        elseif (is_string($query)) {
+        } else if (is_string($query)) {
             /**
              * String based search means http query string search
              */
-            return;
+	    return;
             $url = $this->buildUrl(array(
-                $this->type, "_query?q=" . $query
-            ), $options);
+                $this->type, "_query?q=".$query
+            ), $params);
             $result = $this->call($url, "DELETE");
         }
         return $result['ok'];
     }
-    
+
     /**
      * Basic http call
      *
      * @return array
      * @param mixed $id Optional
      */
-    public function request($path, $method="GET", $payload=false) {
-        $url = $this->buildUrl($path);
+    public function request($path,
+	    			$method="GET",
+				$payload=false,
+				array $params = array()) {
+
+        $url = $this->buildUrl($path, $params);
         switch ($method) {
             case 'GET':
                 $result = $this->conn->get($url);
@@ -108,20 +110,24 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
         }
         return json_decode($result);
     }
-    
+
     /**
      * Flush this index/type combination
      *
      * @return array
      * @param array $options Parameters to pass to delete action
      */
-    public function delete($id=false, array $options = array()) {
-        if ($id)
-            return $this->request(array($this->type, $id), "DELETE");
-        else
-            return $this->request(false, "DELETE");
+    public function delete($id=false, array $params = array()) {
+        if ($id) {
+		return $this->request(array($this->type, $id),
+					"DELETE",
+					null,
+					$params);
+	} else {
+		return $this->request(false, "DELETE", null, $params);
+	}
     }
-    
+
     /**
      * Perform a http call against an url with an optional payload
      *
@@ -137,17 +143,20 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
         curl_setopt($conn, CURLOPT_RETURNTRANSFER, 1) ;
         curl_setopt($conn, CURLOPT_CUSTOMREQUEST, strtoupper($method));
 
-        if (is_array($payload) && count($payload) > 0)
-            curl_setopt($conn, CURLOPT_POSTFIELDS, json_encode($payload)) ;
+        if (is_array($payload) && count($payload) > 0) {
+		curl_setopt($conn, CURLOPT_POSTFIELDS, json_encode($payload)) ;
+	}
 
         $data = curl_exec($conn);
-        if ($data !== false)
-            $data = json_decode($data, true);
-        else
-            throw new Exception("Transport call to API failed");
+        if ($data !== false) {
+		$data = json_decode($data, true);
+	} else {
+		throw new Exception("Transport call to API failed");
+	}
 
-        if (array_key_exists('error', $data))
-            $this->handleError($url, $method, $payload, $data);
+        if (array_key_exists('error', $data)) {
+		$this->handleError($url, $method, $payload, $data);
+	}
 
         return $data;
     }
@@ -159,6 +168,6 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
         $err .= "\n";
         $err .= "Triggered some error: \n";
         $err .= $response['error'] . "\n";
-        //echo $err;
+        throw new Exception($err);
     }
 }

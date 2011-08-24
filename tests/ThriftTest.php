@@ -1,9 +1,13 @@
 <?php // vim:set ts=4 sw=4 et:
 require_once 'helper.php';
-class ElasticSearchHTTPTest extends ElasticSearchParent {
+class ElasticSearchThriftTest extends ElasticSearchParent {
+
+    public static $host = 'localhost';
+    public static $port = 9520;
+    public static $bad_port = 1337;
 
     public function setUp() {
-        $transport = new ElasticSearchTransportThrift("localhost", 9520);
+        $transport = new ElasticSearchTransportThrift(self::$host, self::$port);
         $this->search = new ElasticSearchClient($transport, "test-index", "test-type");
         $this->search->delete();
     }
@@ -11,7 +15,7 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         $this->search->delete();
         $this->search = null;
     }
-    
+
     /**
      * Test indexing a new document and having an auto id
      * This means dupes will occur
@@ -52,7 +56,7 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         ));
         $this->assertEquals(0, $hits['hits']['total']);
     }
-    
+
     /**
      * Test a midly complex search
      */
@@ -83,12 +87,12 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         $this->assertEquals(3, $hits['hits']['total']);
     }
 
-    
+
     /**
      * @expectedException ElasticSearchTransportThriftException
      */
     public function testSearchThrowExceptionWhenServerDown() {
-        $transport = new ElasticSearchTransportThrift("localhost", 9620);
+        $transport = new ElasticSearchTransportThrift(self::$host, self::$bad_port);
         $search = new ElasticSearchClient($transport, "test-index", "test-type");
         $search->search("title:cool");
     }

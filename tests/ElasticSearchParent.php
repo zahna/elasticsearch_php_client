@@ -1,10 +1,11 @@
 <?php // vim:set ts=4 sw=4 et:
+require_once 'PHPUnit/Framework/TestCase.php';
 require_once 'helper.php';
 /**
  * These tests cover the union of every transports api
  */
 abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
-    
+
     protected $search = null;
 
     protected function generateDocument($words, $len=4) {
@@ -20,7 +21,7 @@ abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
         $words = array("cool", "dog", "lorem", "ipsum", "dolor", "sit", "amet");
         // Generate documents
         $options = array(
-            'refresh' => true 
+            'refresh' => true
         );
         foreach ($indexes as $ind) {
             $this->search->setIndex($ind);
@@ -29,10 +30,11 @@ abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
             // Index documents
             while ($tmpNum > 0) {
                 $tmpNum--;
-                if ($rand)
+                if ($rand) {
                     $doc = $this->generateDocument($words, 5);
-                else
+                } else {
                     $doc = array('title' => 'One cool document', 'rank' => rand(1,10));
+                }
                 $this->search->index($doc, $tmpNum + 1, $options);
             }
         }
@@ -50,7 +52,7 @@ abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
 
         $this->assertTrue($resp['ok'] == 1);
     }
-    
+
     /**
      * Test regular string search
      */
@@ -77,9 +79,9 @@ abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
             $this->search->delete();
         }
     }
-    
+
     /**
-     * Try searching using the dsl
+     * Test by searching using the dsl
      */
     public function testSearch() {
         $this->addDocuments();
@@ -91,7 +93,7 @@ abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
         ));
         $this->assertEquals(3, $hits['hits']['total']);
     }
-    
+
     /**
      * Test sort
      */
