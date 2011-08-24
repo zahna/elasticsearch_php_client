@@ -2,8 +2,12 @@
 require_once 'helper.php';
 class ElasticSearchThriftTest extends ElasticSearchParent {
 
+    public static $host = 'localhost';
+    public static $port = 9520;
+    public static $bad_port = 1337;
+
     public function setUp() {
-        $transport = new ElasticSearchTransportThrift("localhost", 9520);
+        $transport = new ElasticSearchTransportThrift(self::$host, self::$port);
         $this->search = new ElasticSearchClient($transport, "test-index", "test-type");
         $this->search->delete();
     }
@@ -88,7 +92,7 @@ class ElasticSearchThriftTest extends ElasticSearchParent {
      * @expectedException ElasticSearchTransportThriftException
      */
     public function testSearchThrowExceptionWhenServerDown() {
-        $transport = new ElasticSearchTransportThrift("localhost", 9620);
+        $transport = new ElasticSearchTransportThrift(self::$host, self::$bad_port);
         $search = new ElasticSearchClient($transport, "test-index", "test-type");
         $search->search("title:cool");
     }

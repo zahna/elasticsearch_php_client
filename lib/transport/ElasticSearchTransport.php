@@ -3,10 +3,15 @@
 abstract class ElasticSearchTransport {
     protected $index, $type;
 
-    abstract public function index($document, $id=false, array $options = array());
-    abstract public function request($path, $method="GET", $payload=false);
-    abstract public function delete($id=false);
-    abstract public function search($query);
+    abstract public function index($document,
+	    				$id = false,
+					array $params = array());
+    abstract public function request($path,
+	    				$method = "GET",
+					$payload = false,
+					array $params = array());
+    abstract public function delete($id = false, array $params = array());
+    abstract public function search($query, array $params = array());
 
     public function setIndex($index) {
         $this->index = $index;
@@ -20,16 +25,22 @@ abstract class ElasticSearchTransport {
      *
      * @return string
      * @param array $path
-     * @param array $options Query parameter options to pass
+     * @param array $params Miscellaneous parameters to pass
      */
-    protected function buildUrl($path=false, array $options = array()) {
+    protected function buildUrl($path=false, array $params = array()) {
         $url = "/" . $this->index;
         if ($path && count($path) > 0)
             $url .= "/" . implode("/", array_filter($path));
         if (substr($url, -1) == "/")
             $url = substr($url, 0, -1);
-        if (count($options) > 0)
-            $url .= "?" . http_build_query($options);
+	if (count($params) > 0) {
+	    if (strpos($url, '?')) {
+		$url .= '&';
+	    } else {
+	        $url .= "?";
+	    }
+	    $url .= http_build_query($params);
+	}
         return $url;
     }
 }

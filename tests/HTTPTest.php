@@ -2,8 +2,12 @@
 require_once 'helper.php';
 class ElasticSearchHTTPTest extends ElasticSearchParent {
 
+    public static $host = 'localhost';
+    public static $port = 9200;
+    public static $bad_port = 1337;
+
     public function setUp() {
-        $transport = new ElasticSearchTransportHTTP("localhost", 9200);
+        $transport = new ElasticSearchTransportHTTP(self::$host, self::$port);
         $this->search = new ElasticSearchClient($transport, "test-index", "test-type");
         $this->search->delete();
     }
@@ -11,7 +15,7 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         $this->search->delete();
         $this->search = null;
     }
-    
+
     /**
      * Test indexing a new document and having an auto id
      * This means dupes will occur
@@ -50,7 +54,7 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         ));
         $this->assertEquals(0, $hits['hits']['total']);
     }
-    
+
     /**
      * Test a midly complex search
      */
@@ -84,7 +88,7 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
      * @expectedException ElasticSearchTransportHTTPException
      */
     public function testSearchThrowExceptionWhenServerDown() {
-        $transport = new ElasticSearchTransportHTTP("localhost", 9300);
+        $transport = new ElasticSearchTransportHTTP(self::$host, self::$bad_port);
         $search = new ElasticSearchClient($transport, "test-index", "test-type");
         $search->search("title:cool");
     }
@@ -98,7 +102,7 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
                 'term' => array(
                     'title' => 'cool'
                 )
-            ), 
+            ),
             'highlight' => array(
                 'fields' => array(
                     'title' => new stdClass()
