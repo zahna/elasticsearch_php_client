@@ -29,6 +29,19 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         $this->assertTrue($resp['ok'] == 1);
     }
 
+    public function testBulkIndexingDocumentWithoutId() {
+        $doc = array(
+            'title' => 'One cool document',
+            'tag' => 'cool'
+        );
+        $this->search->bulkIndex($doc);
+
+        $options = array('refresh' => true);
+        $resp = $this->search->bulkSubmit($options);
+
+        $this->assertTrue($resp['items'][0]['create']['ok'] == 1);
+    }
+
 
     /**
      * Test delete by query

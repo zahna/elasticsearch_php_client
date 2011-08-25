@@ -327,6 +327,83 @@ class ElasticSearchTransportHTTP extends ElasticSearchTransport {
         return $data;
     }
 
+    public function bulk($bulk_queue) {
+	$url = "/_bulk";
+	$method = 'POST';
+	$payload = $bulk_queue->getPayload();
+	if ($bulk_queue->getParams()) {
+		$url .= '?'.http_build_query($bulk_queue->getParams());
+	}
+
+        $conn = $this->ch;
+        $protocol = "http";
+	$requestURL = $protocol . "://" . $this->host . $url;
+
+        curl_setopt($conn, CURLOPT_URL, $requestURL);
+        curl_setopt($conn, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($conn, CURLOPT_PORT, $this->port);
+        curl_setopt($conn, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($conn, CURLOPT_CUSTOMREQUEST, strtoupper($method));
+	curl_setopt($conn, CURLOPT_FORBID_REUSE , 0);
+
+	curl_setopt($conn, CURLOPT_POSTFIELDS, $payload);
+
+        $data = curl_exec($conn);
+
+        if ($data !== false) {
+		$data = json_decode($data, true);
+	} else {
+            /**
+             * cUrl error code reference can be found here:
+             * http://curl.haxx.se/libcurl/c/libcurl-errors.html
+             */
+            $errno = curl_errno($conn);
+            switch ($errno)
+            {
+                case CURLE_UNSUPPORTED_PROTOCOL:
+                    $error = "Unsupported protocol [$protocol]";
+                    break;
+                case CURLE_FAILED_INIT:
+                    $error = "Internal cUrl error?";
+                    break;
+                case CURLE_URL_MALFORMAT:
+                    $error = "Malformed URL [$requestURL] -d " . json_encode($payload);
+                    break;
+                case CURLE_COULDNT_RESOLVE_PROXY:
+                    $error = "Couldnt resolve proxy";
+                    break;
+                case CURLE_COULDNT_RESOLVE_HOST:
+                    $error = "Couldnt resolve host";
+                    break;
+                case CURLE_COULDNT_CONNECT:
+                    $error = "Couldnt connect to host [{$this->host}], ElasticSearch down?";
+                    break;
+                case CURLE_OPERATION_TIMEDOUT:
+                    $error = "Operation timed out on [$requestURL]";
+                    break;
+                default:
+                    $error = "Unknown error";
+                    if ($errno == 0)
+                        $error .= ". Non-cUrl error";
+                    break;
+            }
+	    throw new ElasticSearchTransportHTTPException($requestURL,
+							  $method,
+							  $payload,
+							  null,
+						  	  $this->host,
+						  	  $this->port,
+							  $protocol,
+						  	  $error);
+        }
+
+        if (array_key_exists('error', $data)) {
+		$this->handleError($url, $method, $payload, $data);
+	}
+
+	return $data;
+    }
+
     protected function handleError($url,
 	    				$method,
 					$payload,

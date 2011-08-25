@@ -1,4 +1,5 @@
 <?php
+
 require_once $GLOBALS['THRIFT_ROOT'].'/Thrift.php';
 require_once $GLOBALS['THRIFT_ROOT'].'/protocol/TBinaryProtocol.php';
 require_once $GLOBALS['THRIFT_ROOT'].'/transport/TSocket.php';
@@ -189,6 +190,7 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 */
 	public function request($path, $method="GET", $payload = null,
 				array $params = array()) {
+
 		$url = $this->buildUrl($path);
 		try {
 			$result = $this->call($url, $method, $payload,
@@ -230,6 +232,42 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 		return $resp;
 	}
 
+	/** Submit a bulk API call.
+	 *
+	 * @param ElasticSearchBulkQueue $bulk_queue
+	 * @return array
+	 */
+	public function bulk($bulk_queue) {
+		$method = 'POST';
+		$url = '/_bulk';
+		$payload = $bulk_queue->getPayload();
+		$params = $bulk_queue->getParams();
+		$req = array("method" => $GLOBALS['E_Method'][$method],
+				"uri" => $url,
+				'parameters' => $params);
+
+		$req["body"] = $payload;
+
+		$result = $this->client->execute(new RestRequest($req));
+
+		if (!isset($result->status)){
+			$exception = new ElasticSearchTransportThriftException();
+			$exception->payload = $payload;
+			$exception->port = $this->port;
+			$exception->host = $this->host;
+			$exception->method = $method;
+			throw $exception;
+		}
+
+		$data = json_decode($result->body, true);
+
+		if (array_key_exists('error', $data)) {
+			$this->handleError($url, $method, $payload, $data);
+		}
+
+		return $data;
+	}
+
 	/**
 	 * Perform a http call against an url with an optional payload
 	 *
@@ -240,6 +278,7 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 */
 	protected function call($url, $method="GET", $payload=false,
 				array $params = array()) {
+
 		$req = array("method" => $GLOBALS['E_Method'][$method],
 				"uri" => $url,
 				'parameters' => $params);

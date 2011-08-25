@@ -12,6 +12,7 @@ abstract class ElasticSearchTransport {
 					array $params = array());
     abstract public function delete($id = false, array $params = array());
     abstract public function search($query, array $params = array());
+    abstract public function bulk($bulk_queue);
 
     public function setIndex($index) {
         $this->index = $index;
