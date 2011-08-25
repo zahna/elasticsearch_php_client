@@ -29,6 +29,18 @@ class ElasticSearchThriftTest extends ElasticSearchParent {
         $this->assertTrue($resp['ok'] == 1);
     }
 
+    public function testBulkIndexingDocumentWithoutId() {
+        $doc = array(
+            'title' => 'One cool document',
+            'tag' => 'cool'
+        );
+        $this->search->bulkIndex($doc);
+
+        $options = array('refresh' => true);
+        $resp = $this->search->bulkSubmit($options);
+
+        $this->assertTrue($resp['items'][0]['create']['ok'] == 1);
+    }
 
     /**
      * Test delete by query
@@ -87,6 +99,35 @@ class ElasticSearchThriftTest extends ElasticSearchParent {
         $this->assertEquals(3, $hits['hits']['total']);
     }
 
+    /**
+     * Test a midly complex search with bulk
+     */
+    public function testSlightlyComplexSearchBulk() {
+        $this->addDocumentsBulk();
+        $doc = array(
+            'title' => 'One cool document',
+            'body' => 'Lorem ipsum dolor sit amet',
+            'tag' => array('cool', "stuff", "2k")
+        );
+        $resp = $this->search->index($doc, 1);
+        sleep(1); // Indexing is only near real time
+
+        $hits = $this->search->search(array(
+            'query' => array(
+                'bool' => array(
+                    'must' => array(
+                        'term' => array('title' => 'cool')
+                    ),
+                    'should' => array(
+                        'field' => array(
+                            'tag' => 'stuff'
+                        )
+                    )
+                )
+            )
+        ));
+        $this->assertEquals(3, $hits['hits']['total']);
+    }
 
     /**
      * @expectedException ElasticSearchTransportThriftException

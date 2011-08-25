@@ -161,6 +161,36 @@ class ElasticSearchTransportMemcached extends ElasticSearchTransport {
         return $data;
     }
 
+    public function bulk($bulk_queue) {
+	$url = '/_bulk';
+	$method = 'POST';
+	$payload = $bulk_queue->getPayload();
+	if ($bulk_queue->getParams()) {
+		$url .= '?'.http_build_query($bulk_queue->getParams());
+	}
+
+        $conn = curl_init();
+        curl_setopt($conn, CURLOPT_URL, "http://" . $this->host . $url);
+        curl_setopt($conn, CURLOPT_PORT, $this->port);
+        curl_setopt($conn, CURLOPT_RETURNTRANSFER, 1) ;
+        curl_setopt($conn, CURLOPT_CUSTOMREQUEST, strtoupper($method));
+
+	curl_setopt($conn, CURLOPT_POSTFIELDS, $payload);
+
+        $data = curl_exec($conn);
+        if ($data !== false) {
+		$data = json_decode($data, true);
+	} else {
+		throw new Exception("Transport call to API failed");
+	}
+
+        if (array_key_exists('error', $data)) {
+		$this->handleError($url, $method, $payload, $data);
+	}
+
+        return $data;
+    }
+
     private function handleError($url, $method, $payload, $response) {
         $err = "Request: \n";
         $err .= "curl -X$method http://{$this->host}:{$this->port}$url";

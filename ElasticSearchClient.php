@@ -4,6 +4,8 @@ require_once 'lib/ElasticSearchDSLStringify.php';
 
 require_once 'lib/builder/ElasticSearchDSLBuilder.php';
 
+require_once 'lib/ElasticSearchBulkQueue.php';
+
 require_once 'lib/transport/ElasticSearchTransport.php';
 require_once 'lib/transport/ElasticSearchTransportHTTP.php';
 require_once 'lib/transport/ElasticSearchTransportMemcached.php';
@@ -14,8 +16,8 @@ if (isset($GLOBALS['THRIFT_ROOT'])) {
 
 class ElasticSearchClient {
 
-    private $transport, $index, $type;
-    
+    private $transport, $index, $type, $bulk_queue;
+
     /**
      * Construct search client
      *
@@ -30,8 +32,9 @@ class ElasticSearchClient {
         $this->transport = $transport;
         $this->setIndex($index);
         $this->setType($type);
+        $this->bulk_queue = new ElasticSearchBulkQueue();
     }
-    
+
     /**
      * Change what index to go against
      * @return void
@@ -43,7 +46,7 @@ class ElasticSearchClient {
         $this->index = $index;
         $this->transport->setIndex($index);
     }
-    
+
     /**
      * Change what types to act against
      * @return void
@@ -55,7 +58,7 @@ class ElasticSearchClient {
         $this->type = $type;
         $this->transport->setType($type);
     }
-    
+
     /**
      * Fetch a document by its id
      *
@@ -70,7 +73,7 @@ class ElasticSearchClient {
             ? $response
             : $response['_source'];
     }
-    
+
     /**
      * Perform a request
      *
@@ -111,7 +114,7 @@ class ElasticSearchClient {
         $result['time'] = $this->getMicroTime() - $start;
         return $result;
     }
-    
+
     /**
      * Flush this index/type combination
      *
@@ -123,7 +126,7 @@ class ElasticSearchClient {
     public function delete($id=false, array $options = array()) {
         return $this->transport->delete($id, $options);
     }
-    
+
     /**
      * Flush this index/type combination
      *
@@ -133,6 +136,52 @@ class ElasticSearchClient {
      */
     public function deleteByQuery($query, array $options = array()) {
         return $this->transport->deleteByQuery($query, $options);
+    }
+
+    /**
+     * Add an index operation to the bulk queue.
+     * Use just as you would the regular index,
+     * but be sure to submit the queue!
+     */
+    public function bulkIndex($document,
+                                $id = false,
+                                array $params = array()) {
+
+        foreach (explode(',', $this->index) as $index) {
+            foreach (explode(',', $this->type) as $type) {
+                $this->bulk_queue->index($document,
+                                         $index,
+                                         $this->type,
+                                         $id,
+                                         $params);
+            }
+        }
+    }
+
+    /**
+     * Add a delete operation to the bulk queue.
+     * Use just as you would the regular delete,
+     * but be sure to submit the queue!
+     */
+    public function bulkDelete($id, array $params = array()) {
+        foreach (explode(',', $this->index) as $index) {
+            foreach (explode(',', $this->type) as $type) {
+                $this->bulk_queue->delete($index,
+                                          $this->type,
+                                          $id,
+                                          $params);
+            }
+        }
+    }
+
+    /**
+     * Submit the bulk queue for processing.
+     */
+    public function bulkSubmit(array $params = array()) {
+        $this->bulk_queue->setParams($params);
+        $result = $this->transport->bulk($this->bulk_queue);
+        $this->bulk_queue = new ElasticSearchBulkQueue();
+        return $result;
     }
 
     private function getMicroTime() {
