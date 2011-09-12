@@ -19,12 +19,18 @@ class ElasticSearchBulkQueue
 		return http_build_query($this->_params);
 	}
 
-	public function index($document,
-				$index,
-				$type,
-				$id = false,
-				array $metadata = array()) {
+	public function queueLength()
+	{
+		return count($this->_bulk_array);
+	}
 
+	public function index(
+			$document,
+			$index,
+			$type,
+			$id = false,
+			array $metadata = array())
+	{
 		if (($index == null) || ($type == null)) {
 			$msg = "An index and a type must be specified in ";
 			$msg .= "order to index a document.";
@@ -37,10 +43,10 @@ class ElasticSearchBulkQueue
 			$metadata['_id'] = $id;
 		}
 
-		$this->_bulk_array[] = array('action' => 'index',
-						'metadata' => $metadata,
-						'document' => $document);
-
+		$this->_bulk_array[] = array(
+				'action' => 'index',
+				'metadata' => $metadata,
+				'document' => $document);
 	}
 
 	public function delete($index,

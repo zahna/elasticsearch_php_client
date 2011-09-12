@@ -139,6 +139,16 @@ class ElasticSearchClient {
     }
 
     /**
+     * Get the number of items currently in the bulk queue.
+     *
+     * @return int The number of items in the bulk queue.
+     */
+    public function bulkCount()
+    {
+        return $this->bulk_queue->queueLength();
+    }
+
+    /**
      * Add an index operation to the bulk queue.
      * Use just as you would the regular index,
      * but be sure to submit the queue!
