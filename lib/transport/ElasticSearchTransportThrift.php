@@ -121,7 +121,9 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @param mixed $id Optional
 	 */
 	public function search($query, array $params = array()) {
-		if (is_array($query)) {
+		if ($query == null) {
+			throw new ElasticSearchTransportThriftException();
+		} else if (is_array($query)) {
 			/**
 			 * Array implies using the JSON query DSL
 			 */
