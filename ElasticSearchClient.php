@@ -143,9 +143,19 @@ class ElasticSearchClient {
      *
      * @return int The number of items in the bulk queue.
      */
-    public function bulkCount()
+    public function getBulkCount()
     {
         return $this->bulk_queue->queueLength();
+    }
+
+    /**
+     * Get the bulk queue itself.
+     *
+     * @return array The raw bulk queue.
+     */
+    public function getBulkQueue()
+    {
+        return $this->bulk_queue->getQueue();
     }
 
     /**

@@ -21,7 +21,12 @@ class ElasticSearchBulkQueue
 
 	public function queueLength()
 	{
-		return count($this->_bulk_array);
+		return count($this->_bulk_queue);
+	}
+
+	public function getQueue()
+	{
+		return $this->_bulk_queue;
 	}
 
 	public function index(
