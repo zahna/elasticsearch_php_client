@@ -7,4 +7,5 @@ $path = join("/", $path) . "/";
 
 require_once $path . "ElasticSearchClient.php";
 require_once $path . "tests/ElasticSearchParent.php";
+require_once $path . "tests/ElasticSearchTransportParent.php";
 

@@ -1,47 +1,57 @@
 <?php
 
 abstract class ElasticSearchTransport {
-    protected $index, $type;
+	protected $index, $type;
 
-    abstract public function index($document,
-	    				$id = false,
+	abstract public function index($document,
+					$id = false,
 					array $params = array());
-    abstract public function request($path,
-	    				$method = "GET",
+	abstract public function request($path,
+					$method = "GET",
 					$payload = false,
 					array $params = array());
-    abstract public function delete($id = false, array $params = array());
-    abstract public function search($query, array $params = array());
-    abstract public function bulk($bulk_queue);
+	abstract public function delete($id = false, array $params = array());
+	abstract public function search($query, array $params = array());
+	abstract public function bulk($bulk_queue);
+	abstract public function createIndex(
+			$indexName,
+			array $settings = array());
 
-    public function setIndex($index) {
-        $this->index = $index;
-    }
-    public function setType($type) {
-        $this->type = $type;
-    }
-
-    /**
-     * Build a callable url
-     *
-     * @return string
-     * @param array $path
-     * @param array $params Miscellaneous parameters to pass
-     */
-    protected function buildUrl($path=false, array $params = array()) {
-        $url = "/" . $this->index;
-        if ($path && count($path) > 0)
-            $url .= "/" . implode("/", array_filter($path));
-        if (substr($url, -1) == "/")
-            $url = substr($url, 0, -1);
-	if (count($params) > 0) {
-	    if (strpos($url, '?')) {
-		$url .= '&';
-	    } else {
-	        $url .= "?";
-	    }
-	    $url .= http_build_query($params);
+	public function setIndex($index) {
+		$this->index = $index;
 	}
-        return $url;
-    }
+	public function setType($type) {
+		$this->type = $type;
+	}
+
+	/**
+	 * Build a callable url
+	 *
+	 * @return string
+	 * @param array $path
+	 * @param array $params Miscellaneous parameters to pass
+	 */
+	protected function buildUrl($path=false, array $params = array()) {
+		$url = "/" . $this->index;
+		if ($path && is_array($path) && count($path) > 0) {
+			$url .= "/" . implode("/", array_filter($path));
+		} else if ($path && is_string($path)) {
+			$url .= '/' . $path;
+		}
+		if (substr($url, -1) == "/") {
+			$url = substr($url, 0, -1);
+		}
+		if (count($params) > 0) {
+			if (strpos($url, '?')) {
+				$url .= '&';
+			} else {
+				$url .= "?";
+			}
+
+			$url .= http_build_query($params);
+		}
+		return $url;
+	}
 }
+
+?>

@@ -1,11 +1,11 @@
-<?php // vim:set ts=4 sw=4 et:
+<?php
 require_once 'PHPUnit/Framework/TestCase.php';
 require_once 'helper.php';
 /**
  * These tests cover the union of every transports api
  */
-abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
-
+abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase
+{
     protected $search = null;
 
     protected function generateDocument($words, $len=4) {
@@ -217,3 +217,4 @@ abstract class ElasticSearchParent extends PHPUnit_Framework_TestCase {
         $this->assertEquals(3, $hits['hits']['total']);
     }
 }
+?>

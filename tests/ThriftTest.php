@@ -138,3 +138,4 @@ class ElasticSearchThriftTest extends ElasticSearchParent {
         $search->search("title:cool");
     }
 }
+?>

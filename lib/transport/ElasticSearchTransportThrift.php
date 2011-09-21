@@ -7,24 +7,28 @@ require_once $GLOBALS['THRIFT_ROOT'].'/transport/TBufferedTransport.php';
 
 require_once $GLOBALS['THRIFT_ROOT'].'/packages/elasticsearch/Rest.php';
 
-class ElasticSearchTransportThriftException extends ElasticSearchException {
-	protected $data = array('payload' => null,
-				'port' => null,
-				'host' => null,
-				'url' => null,
-				'method' => null,
-				'params' => null,
-				'response' => null);
+class ElasticSearchTransportThriftException extends ElasticSearchException
+{
+	protected $data = array(
+		'payload' => null,
+		'port' => null,
+		'host' => null,
+		'url' => null,
+		'method' => null,
+		'params' => null,
+		'response' => null,
+	);
 
-	public function __construct($url,
-					$method = 'GET',
-					$payload = null,
-					$params = null,
-					$response = null,
-					$host = 'localhost',
-					$port = 9200,
-					$message = '') {
-
+	public function __construct(
+			$url,
+			$method = 'GET',
+			$payload = null,
+			$params = null,
+			$response = null,
+			$host = 'localhost',
+			$port = 9200,
+			$message = '')
+	{
 		$this->data['url'] = $url;
 		$this->data['method'] = $method;
 		$this->data['payload'] = $payload;
@@ -41,22 +45,39 @@ class ElasticSearchTransportThriftException extends ElasticSearchException {
 		parent::__construct($message);
 	}
 
-	public function __set($key, $value) {
-		if (array_key_exists($key, $this->data))
+	public function __set($key, $value)
+	{
+		if (array_key_exists($key, $this->data)) {
 			$this->data[$key] = $value;
-	}
-	public function __get($key) {
-		if (array_key_exists($key, $this->data))
-			return $this->data[$key];
-		else
-			return false;
+		}
 	}
 
-	public function getCLICommand() {
-		$postData = json_encode($this->payload);
-		$paramString = (count($this->params) > 0) ?
-				http_build_query($this->params) :'';
-		$curlCall = "curl -X{$this->method} 'http://{$this->host}:{$this->port}{$this->url}?{$paramString}' -d '$postData'";
+	public function __get($key)
+	{
+		if (array_key_exists($key, $this->data)) {
+			return $this->data[$key];
+		} else {
+			return false;
+		}
+	}
+
+	public function getCLICommand()
+	{
+		$curlCall = "curl -X";
+		$curlCall .= $this->method;
+		$curlCall .= " 'http://";
+		$curlCall .= $this->host;
+		$curlCall .= ":";
+		$curlCall .= $this->port;
+		$curlCall .= $this->url;
+		if (count($this->params) > 0) {
+			$curlCall .= "?";
+			$curlCall .= http_build_query($this->params);
+		}
+		$curlCall .= "' -d '";
+		$curlCall .= json_encode($this->payload);
+		$curlCall .= "'";
+
 		return $curlCall;
 	}
 }
@@ -72,7 +93,8 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	protected $client = NULL;
 
 
-	public function __construct($host, $port) {
+	public function __construct($host, $port)
+	{
 		try {
 			$this->host = $host;
 			$this->port = $port;
@@ -90,8 +112,20 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 		}
 	}
 
-	public function __destruct() {
+	public function __destruct()
+	{
 		$this->transport->close();
+	}
+
+	public function createIndex($indexName, array $settings = array())
+	{
+		if (!array_key_exists('settings', $settings)) {
+			$settings = array(
+				'settings' => $settings,
+			);
+		}
+
+		$this->call('/'.$indexName, 'POST', $settings);
 	}
 
 	/**
@@ -101,12 +135,12 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @param array $document
 	 * @param mixed $id Optional
 	 */
-	public function index($document, $id=false, array $params = array()) {
+	public function index($document, $id=false, array $params = array())
+	{
 		$url = $this->buildUrl(array($this->type, $id));
 		$method = ($id == false) ? "POST" : "PUT";
 		try {
-			$response = $this->call($url, $method, $document,
-						$params);
+			$response = $this->call($url, $method, $document, $params);
 		} catch (ElasticSearchTransportThriftException $e) {
 			throw $e;
 		}
@@ -120,7 +154,8 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @return array
 	 * @param mixed $id Optional
 	 */
-	public function search($query, array $params = array()) {
+	public function search($query, array $params = array())
+	{
 		if ($query == null) {
 			throw new ElasticSearchTransportThriftException();
 		} else if (is_array($query)) {
@@ -129,8 +164,7 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 			 */
 			$url = $this->buildUrl(array($this->type, "_search"));
 			try {
-				$result = $this->call($url, "GET", $query,
-							$params);
+				$result = $this->call($url, "GET", $query, $params);
 			} catch (ElasticSearchTransportThriftException $e) {
 				throw $e;
 			}
@@ -141,12 +175,12 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 			$url = $this->buildUrl(array($this->type, "_search"));
 			$params['q'] = $query;
 			try {
-				$result = $this->call($url, "GET", null,
-							$params);
+				$result = $this->call($url, "GET", null, $params);
 			} catch (ElasticSearchTransportThriftException $e) {
 				throw $e;
 			}
 		}
+
 		return $result;
 	}
 
@@ -156,15 +190,15 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @return array
 	 * @param mixed $id Optional
 	 */
-	public function deleteByQuery($query, array $params = array()) {
+	public function deleteByQuery($query, array $params = array())
+	{
 		if (is_array($query)) {
 			/**
 			 * Array implies using the JSON query DSL
 			 */
 			$url = $this->buildUrl(array($this->type, "_query"));
 			try {
-				$result = $this->call($url, "DELETE", $query,
-							$params);
+				$result = $this->call($url, "DELETE", $query, $params);
 			} catch (ElasticSearchTransportThriftException $e) {
 				throw $e;
 			}
@@ -175,12 +209,12 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 			$url = $this->buildUrl(array($this->type, "_query"));
 			$params['q'] = $query;
 			try {
-				$result = $this->call($url, "DELETE", null,
-							$params);
+				$result = $this->call($url, "DELETE", null, $params);
 			} catch (ElasticSearchTransportThriftException $e) {
 				throw $e;
 			}
 		}
+
 		return $result['ok'];
 	}
 
@@ -190,16 +224,19 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @return array
 	 * @param mixed $id Optional
 	 */
-	public function request($path, $method="GET", $payload = null,
-				array $params = array()) {
-
+	public function request(
+			$path,
+			$method="GET",
+			$payload = null,
+			array $params = array())
+	{
 		$url = $this->buildUrl($path);
 		try {
-			$result = $this->call($url, $method, $payload,
-						$params);
+			$result = $this->call($url, $method, $payload, $params);
 		} catch (ElasticSearchTransportThriftException $e) {
 			throw $e;
 		}
+
 		return $result;
 	}
 
@@ -208,19 +245,25 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 *
 	 * @return array
 	 */
-	public function delete($id=false, array $params = array()) {
+	public function delete($id=false, array $params = array())
+	{
 		$resp = null;
 		try {
 			if ($id) {
-				$resp = $this->request(array($this->type, $id),
-							"DELETE",
-							null,
-							$params);
+				$resp = $this->request(
+						array(
+							$this->type,
+							$id,
+						),
+						"DELETE",
+						null,
+						$params);
 			} else {
-				$resp = $this->request(false,
-							"DELETE",
-							null,
-							$params);
+				$resp = $this->request(
+						false,
+						"DELETE",
+						null,
+						$params);
 			}
 		} catch (ElasticSearchTransportThriftException $e) {
 			if (is_array($e->response)) {
@@ -231,6 +274,7 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 				throw $e;
 			}
 		}
+
 		return $resp;
 	}
 
@@ -239,14 +283,17 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @param ElasticSearchBulkQueue $bulk_queue
 	 * @return array
 	 */
-	public function bulk($bulk_queue) {
+	public function bulk($bulk_queue)
+	{
 		$method = 'POST';
 		$url = '/_bulk';
 		$payload = $bulk_queue->getPayload();
 		$params = $bulk_queue->getParams();
-		$req = array("method" => $GLOBALS['E_Method'][$method],
-				"uri" => $url,
-				'parameters' => $params);
+		$req = array(
+			"method" => $GLOBALS['E_Method'][$method],
+			"uri" => $url,
+			'parameters' => $params,
+		);
 
 		$req["body"] = $payload;
 
@@ -278,12 +325,17 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @param string $method (GET/POST/PUT/DELETE)
 	 * @param array $payload The document/instructions to pass along
 	 */
-	protected function call($url, $method="GET", $payload=false,
-				array $params = array()) {
-
-		$req = array("method" => $GLOBALS['E_Method'][$method],
-				"uri" => $url,
-				'parameters' => $params);
+	protected function call(
+			$url,
+			$method="GET",
+			$payload=false,
+			array $params = array())
+	{
+		$req = array(
+			"method" => $GLOBALS['E_Method'][$method],
+			"uri" => $url,
+			'parameters' => $params,
+		);
 
 		if (is_array($payload) && count($payload) > 0) {
 			$req["body"] = json_encode($payload);
@@ -292,35 +344,32 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 		$result = $this->client->execute(new RestRequest($req));
 
 		if (!isset($result->status)){
-			throw new ElasticSearchTransportThriftException($url,
-									$method,
-									$payload,
-									$params,
-									$result,
-									$this->host,
-									$this->port);
+			throw new ElasticSearchTransportThriftException(
+					$url,
+					$method,
+					$payload,
+					$params,
+					$result,
+					$this->host,
+					$this->port);
 		}
 
 		$data = json_decode($result->body, true);
 
 		if (array_key_exists('error', $data)) {
-			$this->handleError($url,
-						$method,
-						$payload,
-						$params,
-						$data);
-
+			$this->handleError($url, $method, $payload, $params, $data);
 		}
 
 		return $data;
 	}
 
-	protected function handleError($url,
-					$method,
-					$payload,
-					array $params = array(),
-					$response = null) {
-
+	protected function handleError(
+			$url,
+			$method,
+			$payload,
+			array $params = array(),
+			$response = null)
+	{
 		$error = null;
 		if (is_array($response)) {
 			if (array_key_exists('error', $response)) {
@@ -328,14 +377,15 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 			}
 		}
 
-		throw new ElasticSearchTransportThriftException($url,
-								$method,
-								$payload,
-								$params,
-								$response,
-								$this->host,
-								$this->port,
-								$error);
+		throw new ElasticSearchTransportThriftException(
+				$url,
+				$method,
+				$payload,
+				$params,
+				$response,
+				$this->host,
+				$this->port,
+				$error);
 	}
 
 	/**
@@ -344,14 +394,18 @@ class ElasticSearchTransportThrift extends ElasticSearchTransport
 	 * @return string
 	 * @param array $path
 	 */
-	protected function buildUrl($path=false) {
+	protected function buildUrl($path=false)
+	{
 		$url = "/" . $this->index;
-		if ($path && count($path) > 0) {
+		if ($path && is_array($path) && count($path) > 0) {
 			$url .= "/" . implode("/", array_filter($path));
+		} else if ($path && is_string($path)) {
+			$url .= '/' . $path;
 		}
 		if (substr($url, -1) == "/") {
 			$url = substr($url, 0, -1);
 		}
+
 		return $url;
 	}
 }
