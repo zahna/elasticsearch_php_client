@@ -135,3 +135,4 @@ class ElasticSearchHTTPTest extends ElasticSearchParent {
         $this->assertRegexp('/<em>/', $hit['highlight']['title'][0]);
     }
 }
+?>
