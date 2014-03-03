@@ -89,9 +89,7 @@ class ElasticSearchBulkQueue
 			$bulk_doc .= implode(',', $metadata);
 			$bulk_doc .= "}}\n";
 			if ($bulk_item['action'] == 'index') {
-				$bulk_doc .=
-					json_encode($bulk_item['document'],
-							JSON_FORCE_OBJECT);
+				$bulk_doc .= json_encode($bulk_item['document']);
 				$bulk_doc .= "\n";
 			}
 		}
